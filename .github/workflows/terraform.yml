@@ -33,12 +33,16 @@ jobs:
       - run: terraform fmt -check
       - run: terraform validate
 
-      - name: Terraform Plan (PRs)
+      - name: Terraform Plan (PRs)       
         if: github.event_name == 'pull_request'
-        run: terraform plan -input=false \
-             -var "admin_ssh_public_key=${{ secrets.SSH_PUBLIC_KEY }}"
+        env:
+          TF_VAR_admin_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+        run: terraform plan -input=false
 
       - name: Terraform Apply (main)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve -input=false \
-             -var "admin_ssh_public_key=${{ secrets.SSH_PUBLIC_KEY }}"
+        env:
+          TF_VAR_admin_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+        run: terraform apply -auto-approve -input=false
+
+        
