@@ -1,11 +1,9 @@
 name: Terraform Azure VM
 
 on:
-  pull_request:
-    paths: [ "main/**", ".github/workflows/terraform.yml" ]
   push:
     branches: [ "main" ]
-    paths: [ "main/**", ".github/workflows/terraform.yml" ]
+  pull_request:
 
 permissions:
   contents: read
@@ -16,7 +14,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ./main
+        working-directory: .  # run in repo root
 
     steps:
       - uses: actions/checkout@v4
