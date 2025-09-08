@@ -37,7 +37,15 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           TF_VAR_admin_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-        run: terraform plan -input=false
+        run: |
+          terraform plan -input=false -no-color -detailed-exitcode
+          code=$?
+          # 0 = no changes, 2 = changes (good), 1 = error (bad)
+          if [ $code -eq 1 ]; then
+            echo "Terraform plan failed"
+            exit 1
+          fi
+          echo "Terraform plan exit code: $code (treating as success)"
 
       - name: Terraform Apply (main)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
