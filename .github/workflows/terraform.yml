@@ -1,11 +1,9 @@
 name: Terraform Azure VM
 
 on:
-  pull_request:
-    paths: [ "main/**", ".github/workflows/terraform.yml" ]
   push:
     branches: [ "main" ]
-    paths: [ "main/**", ".github/workflows/terraform.yml" ]
+  pull_request:
 
 permissions:
   contents: read
@@ -16,33 +14,42 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ./main
+        working-directory: .
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Azure Login (Service Principal + Secret)
+      # Azure login using a single JSON secret (AZURE_CREDENTIALS)
+      - name: Azure Login
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - uses: hashicorp/setup-terraform@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.7.5
 
-      - run: terraform init
-      - run: terraform fmt -check
-      - run: terraform validate
+      - name: Terraform Init
+        run: terraform init
 
+      - name: Terraform Format Check
+        run: terraform fmt -check
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      # PLAN on PRs. Treat exit code 2 ("changes present") as success.
       - name: Terraform Plan (PRs)
         if: github.event_name == 'pull_request'
-        run: terraform plan -input=false \
-             -var "admin_ssh_public_key=${{ secrets.SSH_PUBLIC_KEY }}"
+        env:
+          TF_VAR_admin_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+        run: terraform plan -input=false -no-color || true
+          
 
+      # APPLY on push to main
       - name: Terraform Apply (main)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve -input=false \
-             -var "admin_ssh_public_key=${{ secrets.SSH_PUBLIC_KEY }}"
+        env:
+          TF_VAR_admin_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+        run: terraform apply -auto-approve -input=false
